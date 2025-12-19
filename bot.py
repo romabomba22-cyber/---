@@ -126,13 +126,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if welcome_bonus:
         welcome_text += f"🎁 <b>Вам начислен стартовый бонус: 1000 монет!</b>\n\n"
     
-    welcome_text += f"💰 <b>Ваш баланс:</b> {coins} монет\n"
-    welcome_text += f"🏦 <b>В банке:</b> {bank} монет\n\n"
-    welcome_text += f"📌 <b>Основные команды:</b>\n"
-    welcome_text += f"• /balance - Ваш баланс\n"
-    welcome_text += f"• /daily - Ежедневный бонус\n"
-    welcome_text += f"• /work - Заработать монеты\n"
-    welcome_text += f"• /help - Все команды\n\n"
     welcome_text += f"❇️ Добро пожаловать! ❇️"
 
     await update.message.reply_text(welcome_text, parse_mode="HTML")
@@ -333,4 +326,5 @@ def main():
         raise
 if __name__ == '__main__':  # ← ИСПРАВЛЕНО: ДВОЙНЫЕ ПОДЧЕРКИВАНИЯ!
     main()
+
 
