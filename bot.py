@@ -1,149 +1,88 @@
 import os
 import logging
 import json
+import random
 from datetime import datetime
 from telegram import Update
 from telegram.ext import Application, CommandHandler, ContextTypes
 
-# Настройка логирования
+# ===================== НАСТРОЙКИ =====================
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 logger = logging.getLogger(name)
 
-# Получаем токен из переменных окружения bothost.ru
 TOKEN = os.getenv('API_TOKEN')
 if not TOKEN:
-    logger.error("❌ API_TOKEN не найден в переменных окружения!")
+    logger.error("❌ API_TOKEN не найден!")
     exit(1)
 
-# ===================== БАЗА ДАННЫХ В КОДЕ =====================
-# ВСЕ ДАННЫЕ ХРАНЯТСЯ ЗДЕСЬ! (объявляем ПЕРЕД функциями)
-USERS_DATABASE = {}
-# или если хотите тестовых пользователей:
-# USERS_DATABASE = {
-#     "6956241293": {
-#         "username": "test_user",
-#         "first_name": "Тест",
-#         "coins": 1000,
-#         "bank": 0
-#     }
-# }
+# ===================== ПРОСТАЯ БАЗА В ПАМЯТИ =====================
+# ВСЕ ДАННЫЕ ЗДЕСЬ
+users_db = {}  # ← ПРОСТАЯ переменная, никаких ошибок!
 
-def save_database_to_file():
-    """Сохранить базу данных в отдельный файл (для резервной копии)"""
+def load_db():
+    """Загрузить базу из файла"""
+    global users_db
     try:
-        with open('database_backup.py', 'w', encoding='utf-8') as f:
-            f.write('# АВТОСОХРАНЕННАЯ БАЗА ДАННЫХ БОТА\n')
-            f.write('# НЕ РЕДАКТИРУЙТЕ ВРУЧНУЮ!\n\n')
-            f.write('USERS_DATABASE = ')
-            f.write(json.dumps(USERS_DATABASE, ensure_ascii=False, indent=2))
-            f.write('\n\n# Конец базы данных')
-        logger.info(f"💾 База сохранена в файл: {len(USERS_DATABASE)} пользователей")
-    except Exception as e:
-        logger.error(f"❌ Ошибка сохранения базы: {e}")
+        if os.path.exists('db_backup.txt'):
+            with open('db_backup.txt', 'r', encoding='utf-8') as f:
+                users_db = json.load(f)
+            logger.info(f"✅ База загружена: {len(users_db)} пользователей")
+    except:
+        users_db = {}
 
-def load_database_from_file():
-    """Загрузить базу данных из файла при запуске"""
-    global USERS_DATABASE
+def save_db():
+    """Сохранить базу в файл"""
     try:
-        if os.path.exists('database_backup.py'):
-            with open('database_backup.py', 'r', encoding='utf-8') as f:
-                content = f.read()
-                if 'USERS_DATABASE = ' in content:
-                    # Безопасное извлечение данных
-                    import ast
-                    lines = content.split('\n')
-                    for i, line in enumerate(lines):
-                        if 'USERS_DATABASE = ' in line:
-                            db_str = '\n'.join(lines[i:])
-                            # Находим начало и конец словаря
-                            start = db_str.find('{')
-                            end = db_str.rfind('}') + 1
-                            if start != -1 and end != -1:
-                                db_dict_str = db_str[start:end]
-                                USERS_DATABASE = ast.literal_eval(db_dict_str)
-                                logger.info(f"✅ Загружено {len(USERS_DATABASE)} пользователей из файла")
-                                break
+        with open('db_backup.txt', 'w', encoding='utf-8') as f:
+            json.dump(users_db, f, ensure_ascii=False)
     except Exception as e:
-        logger.warning(f"Не удалось загрузить базу: {e}")
-        USERS_DATABASE = {}
+        logger.error(f"❌ Ошибка сохранения: {e}")
 
-# Загружаем базу при старте
-load_database_from_file()
+# Загружаем при старте
+load_db()
 
 def get_user(user_id):
-    """Получить данные пользователя"""
-    return USERS_DATABASE.get(str(user_id))
+    """Получить пользователя"""
+    return users_db.get(str(user_id))
 
-def save_user(user_data):
-    """Сохранить/обновить данные пользователя"""
-    user_id = str(user_data['user_id'])
+def save_user(user_id, username="", first_name=""):
+    """Сохранить пользователя"""
+    user_id_str = str(user_id)
     
-    if user_id not in USERS_DATABASE:
-        # Новый пользователь
-        USERS_DATABASE[user_id] = {
-            'user_id': user_data['user_id'],
-            'username': user_data.get('username'),
-            'first_name': user_data.get('first_name'),
-            'last_name': user_data.get('last_name'),
-            'coins': 1000,  # Стартовый баланс
+    if user_id_str not in users_db:
+        users_db[user_id_str] = {
+            'user_id': user_id,
+            'username': username,
+            'first_name': first_name,
+            'coins': 1000,
             'bank': 0,
             'last_daily': None,
             'last_work': None,
-            'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'last_active': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'created': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
-        # Сохраняем при добавлении нового пользователя
-        save_database_to_file()
-    else:
-        # Обновляем существующего
-USERS_DATABASE[user_id].update({
-            'username': user_data.get('username') or USERS_DATABASE[user_id].get('username'),
-            'first_name': user_data.get('first_name') or USERS_DATABASE[user_id].get('first_name'),
-            'last_name': user_data.get('last_name') or USERS_DATABASE[user_id].get('last_name'),
-            'last_active': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        })
-    
-    return True
+        save_db()  # Сохраняем нового пользователя
+        return True
+    return False
 
 def add_coins(user_id, amount):
-    """Добавить монеты пользователю"""
+    """Добавить монеты"""
     user_id_str = str(user_id)
-    
-    if user_id_str in USERS_DATABASE:
-        USERS_DATABASE[user_id_str]['coins'] = USERS_DATABASE[user_id_str].get('coins', 0) + amount
-        USERS_DATABASE[user_id_str]['last_active'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # Сохраняем при изменении баланса
-        save_database_to_file()
-        return USERS_DATABASE[user_id_str]['coins']
-    return None
+    if user_id_str in users_db:
+        users_db[user_id_str]['coins'] = users_db[user_id_str].get('coins', 0) + amount
+        save_db()  # Сохраняем изменение
+        return users_db[user_id_str]['coins']
+    return 0
 
 def get_balance(user_id):
-    """Получить баланс пользователя"""
+    """Получить баланс"""
     user = get_user(user_id)
     if user:
         return user.get('coins', 0), user.get('bank', 0)
     return 0, 0
 
-def get_top_users(limit=10):
-    """Получить топ пользователей по монетам"""
-    sorted_users = sorted(
-        USERS_DATABASE.items(),
-        key=lambda x: x[1].get('coins', 0),
-        reverse=True
-    )[:limit]
-    
-    return [
-        {
-            'user_id': user_id,
-            'username': data.get('username'),
-            'first_name': data.get('first_name'),
-            'coins': data.get('coins', 0)
-        }
-        for user_id, data in sorted_users
-    ]
 
 # ===================== КОМАНДЫ БОТА =====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -426,4 +365,5 @@ application.add_handler(CommandHandler("work", work_command))
 
 if __name__ == '__main__':
     main()
+
 
