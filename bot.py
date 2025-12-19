@@ -116,9 +116,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_mention = f'<a href="tg://user?id={user.id}">{username}</a>'
     
     # Получаем баланс
-coins, bank = get_balance(user.id)
+    coins, bank = get_balance(user.id)
     
-    welcome_text = f"🤚🏻 {user_mention}, приветствую 🤚🏻\n\n"
+    welcome_text =  f"🤚🏻 {user_mention}, приветствую 🤚🏻\n\n"
     welcome_text += f"🎗 Меня зовут PGB, я многофункциональный игровой развлекательный бот 🎗\n\n"
     welcome_text += f"🎮 В боте вы сможете поиграть во множество игр, зарабатывать валюты, копать руды, завести питомца, открывать кейсы и многое другое! 🎮\n\n"
     welcome_text += f"💥 Имеются различные имущества, статусы, работы, которые вы сможете купить и улучшать 💥\n\n"
@@ -136,6 +136,7 @@ coins, bank = get_balance(user.id)
     welcome_text += f"❇️ Добро пожаловать! ❇️"
 
     await update.message.reply_text(welcome_text, parse_mode="HTML")
+
 
 async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /balance - показать баланс"""
@@ -332,3 +333,4 @@ def main():
         raise
 if __name__ == '__main__':  # ← ИСПРАВЛЕНО: ДВОЙНЫЕ ПОДЧЕРКИВАНИЯ!
     main()
+
