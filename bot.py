@@ -347,7 +347,6 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("balance", balance_command))
         application.add_handler(CommandHandler("daily", daily_command))
-application.add_handler(CommandHandler("work", work_command))
         application.add_handler(CommandHandler("top", top_command))
         application.add_handler(CommandHandler("save_db", save_db_command))
         application.add_handler(CommandHandler("stats", stats_command))
@@ -365,5 +364,6 @@ application.add_handler(CommandHandler("work", work_command))
 
 if __name__ == '__main__':
     main()
+
 
 
