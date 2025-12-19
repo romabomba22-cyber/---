@@ -19,14 +19,33 @@ if not TOKEN:
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
     user = update.effective_user
+    
+    # Создаем клавиатуру с кнопками-ссылками
+    keyboard = [
+        [
+            InlineKeyboardButton("📱 Мой Telegram", url="https://t.me/your_username"),
+            InlineKeyboardButton("💻 GitHub", url="https://github.com/romabomba22-cyber")
+        ],
+        [
+            InlineKeyboardButton("🚀 Донат", url="https://www.donationalerts.com/r/your_donate"),
+            InlineKeyboardButton("📚 Документация", url="https://core.telegram.org/bots/api")
+        ],
+        
+    
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text(
         f"✅ Бот работает!\n"
         f"👋 Привет, {user.first_name}!\n"
         f"🆔 Твой ID: {user.id}\n\n"
         f"📋 Команды:\n"
         f"/help - Помощь\n"
-        f"/ping - Проверка связи"
+        f"/ping - Проверка связи\n\n"
+        f"👇 Используй кнопки ниже:",
+        reply_markup=reply_markup,
+        parse_mode='Markdown'
     )
+
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /help"""
@@ -53,6 +72,10 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("ping", ping_command))
+
+        # Регистрируем обработчик кнопок
+        from telegram.ext import CallbackQueryHandler
+        application.add_handler(CallbackQueryHandler(button_handler))
         
         logger.info(f"🤖 Бот запускается с токеном: {TOKEN[:10]}...")
         
@@ -65,4 +88,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
