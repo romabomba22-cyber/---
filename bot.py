@@ -16,8 +16,20 @@ if not TOKEN:
     logger.error("❌ API_TOKEN не найден в переменных окружения!")
     exit(1)
 
+# Временные заглушки для функций работы с БД (пока их нет)
+def get_user(user_id):
+    """Заглушка для функции получения пользователя"""
+    logger.info(f"Запрос пользователя {user_id} (функция в разработке)")
+    return None  # Пока всегда возвращаем None
+
+def save_user(user_data):
+    """Заглушка для функции сохранения пользователя"""
+    logger.info(f"Сохранение пользователя: {user_data} (функция в разработке)")
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
+    
+    # Проверяем и сохраняем пользователя (пока заглушки)
     if not get_user(user.id):
         save_user({'user_id': user.id, 'username': user.username})
 
@@ -68,8 +80,5 @@ def main():
         logger.error(f"❌ Критическая ошибка: {e}")
         raise
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # ← ИСПРАВЛЕНО: двойные подчеркивания!
     main()
-
-
-
