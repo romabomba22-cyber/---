@@ -1,6 +1,6 @@
 import os
 import logging
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 
 # Настройка логирования
@@ -30,7 +30,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             InlineKeyboardButton("🚀 Донат", url="https://www.donationalerts.com/r/your_donate"),
             InlineKeyboardButton("📚 Документация", url="https://core.telegram.org/bots/api")
         ],
-        
+        [
+            InlineKeyboardButton("💰 Баланс", callback_data="balance"),
+            InlineKeyboardButton("🎮 Играть", callback_data="play")
+        ]
+    ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
@@ -46,21 +50,53 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode='Markdown'
     )
 
-
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /help"""
+    # Клавиатура для команды help
+    keyboard = [
+        [
+            InlineKeyboardButton("📱 Telegram", url="https://t.me/your_username"),
+            InlineKeyboardButton("💻 GitHub", url="https://github.com/romabomba22-cyber")
+        ]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    
     await update.message.reply_text(
         "🆘 *Помощь по командам:*\n\n"
-        "/start - Начать\n"
+        "/start - Начать (с кнопками)\n"
         "/help - Эта справка\n"
         "/ping - Проверка работы бота\n\n"
-        "⚡ Бот работает на bothost.ru",
+        "⚡ Бот работает на bothost.ru\n\n"
+        "🔗 *Полезные ссылки:*",
+        reply_markup=reply_markup,
         parse_mode='Markdown'
     )
 
 async def ping_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /ping"""
     await update.message.reply_text("🏓 PONG! Бот активен!")
+
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработчик нажатий на inline-кнопки"""
+    query = update.callback_query
+    await query.answer()
+    
+    if query.data == "balance":
+        await query.edit_message_text(
+            text="💰 *Баланс*\n\n"
+                 "Функция баланса скоро появится!\n"
+                 "Сейчас доступны команды:\n"
+                 "/help - Помощь\n"
+                 "/ping - Проверка связи",
+            parse_mode='Markdown'
+        )
+    elif query.data == "play":
+        await query.edit_message_text(
+            text="🎮 *Игровой модуль*\n\n"
+                 "Игровые функции в разработке!\n"
+                 "Следите за обновлениями.",
+            parse_mode='Markdown'
+        )
 
 def main():
     """Запуск бота"""
@@ -72,9 +108,9 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("ping", ping_command))
-
+        
         # Регистрируем обработчик кнопок
-        from telegram.ext import CallbackQueryHandler
+from telegram.ext import CallbackQueryHandler
         application.add_handler(CallbackQueryHandler(button_handler))
         
         logger.info(f"🤖 Бот запускается с токеном: {TOKEN[:10]}...")
@@ -88,5 +124,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
