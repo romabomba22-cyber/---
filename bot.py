@@ -20,14 +20,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Обработчик команды /start"""
     user = update.effective_user
     await update.message.reply_text(
-        f"\n"
-        f"👋 Привет, {user.first_name}!\n"
-        f"🆔 Твой ID: {user.id}\n\n"
-        f"📋 Команды:\n"
-        f"/help - Помощь\n"
-        f"/ping - Проверка связи"
-
-        🤚🏻 {user.first_name}, приветствую 🤚🏻\n\n"
+        f"🤚🏻 {user.first_name}, приветствую 🤚🏻\n\n"
 
         f"🎗 Меня зовут *PGB*, я многофункциональный игровой развлекательный бот 🎗\n"
 
@@ -77,4 +70,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
