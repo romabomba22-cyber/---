@@ -10,7 +10,7 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(name)
 
 # Получаем токен из переменных окружения bothost.ru
 TOKEN = os.getenv('API_TOKEN')
@@ -19,19 +19,17 @@ if not TOKEN:
     exit(1)
 
 # ===================== БАЗА ДАННЫХ В КОДЕ =====================
-# ВСЕ ДАННЫЕ ХРАНЯТСЯ ЗДЕСЬ!
-USERS_DATABASE = {
-    # Формат: "user_id": {данные}
-    # Пример (можно удалить):
-    # "6956241293": {
-    #     "username": "roma_user",
-    #     "first_name": "Рома",
-    #     "coins": 1500,
-    #     "bank": 300,
-    #     "last_daily": "2024-01-15",
-    #     "last_work": "2024-01-15 14:30:00"
-    # }
-}
+# ВСЕ ДАННЫЕ ХРАНЯТСЯ ЗДЕСЬ! (объявляем ПЕРЕД функциями)
+USERS_DATABASE = {}
+# или если хотите тестовых пользователей:
+# USERS_DATABASE = {
+#     "6956241293": {
+#         "username": "test_user",
+#         "first_name": "Тест",
+#         "coins": 1000,
+#         "bank": 0
+#     }
+# }
 
 def save_database_to_file():
     """Сохранить базу данных в отдельный файл (для резервной копии)"""
@@ -428,3 +426,4 @@ application.add_handler(CommandHandler("work", work_command))
 
 if __name__ == '__main__':
     main()
+
