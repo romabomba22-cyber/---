@@ -124,7 +124,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text += f"💥 Имеются различные имущества, статусы, работы, которые вы сможете купить и улучшать 💥\n\n"
     
     if welcome_bonus:
-        welcome_text += f"🎁 <b>Вам начислен стартовый бонус: 1000 монет!</b>\n\n"
+        welcome_text += f"🎁 Вам начислен стартовый бонус: 1000 монет!\n\n"
     
     welcome_text += f"❇️ Добро пожаловать! ❇️"
 
@@ -147,17 +147,10 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     coins, bank = get_balance(user.id)
     total = coins + bank
     
-    balance_text = f"💰 <b>БАЛАНС {user.first_name}</b>\n\n"
-    balance_text += f"🪙 <b>Наличные:</b> {coins} монет\n"
-    balance_text += f"🏦 <b>В банке:</b> {bank} монет\n"
-    balance_text += f"📊 <b>Всего:</b> {total} монет\n\n"
+    balance_text = f"💰 {user.first_name}, <b>ваш баланс:</b>\n\n"
+    balance_text += f"💵 <b>Монеты:</b> {coins}\n"
     
-    if coins < 100:
-        balance_text += f"💡 <i>Совет: используйте /work чтобы заработать больше монет!</i>"
-    elif coins < 1000:
-        balance_text += f"💡 <i>Хороший старт! Попробуйте /daily за ежедневным бонусом!</i>"
-    else:
-        balance_text += f"💡 <i>Отлично! Можете сохранить деньги в банке!</i>"
+    
 
     await update.message.reply_text(balance_text, parse_mode="HTML")
 
@@ -326,6 +319,7 @@ def main():
         raise
 if __name__ == '__main__':  # ← ИСПРАВЛЕНО: ДВОЙНЫЕ ПОДЧЕРКИВАНИЯ!
     main()
+
 
 
 
