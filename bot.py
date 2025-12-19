@@ -330,5 +330,5 @@ def main():
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
         raise
-if __name__ == '__main__':
+if __name__ == '__main__':  # ← ИСПРАВЛЕНО: ДВОЙНЫЕ ПОДЧЕРКИВАНИЯ!
     main()
