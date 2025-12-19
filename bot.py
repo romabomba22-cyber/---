@@ -1,7 +1,7 @@
 import os
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes
+from telegram.ext import Application, CommandHandler, ContextTypes, CallbackQueryHandler
 
 # Настройка логирования
 logging.basicConfig(
@@ -108,9 +108,7 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("ping", ping_command))
-        
-        # Регистрируем обработчик кнопок
-from telegram.ext import CallbackQueryHandler
+# Регистрируем обработчик кнопок - ВСЁ ИМПОРТИРОВАНО
         application.add_handler(CallbackQueryHandler(button_handler))
         
         logger.info(f"🤖 Бот запускается с токеном: {TOKEN[:10]}...")
