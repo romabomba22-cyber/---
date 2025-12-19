@@ -18,71 +18,108 @@ if not TOKEN:
     logger.error("❌ API_TOKEN не найден в переменных окружения!")
     exit(1)
 
-# Файл для хранения данных пользователей (вместо БД)
-DATA_FILE = 'users_data.json'
+# ===================== БАЗА ДАННЫХ В КОДЕ =====================
+# ВСЕ ДАННЫЕ ХРАНЯТСЯ ЗДЕСЬ!
+USERS_DATABASE = {
+    # Формат: "user_id": {данные}
+    # Пример (можно удалить):
+    # "6956241293": {
+    #     "username": "roma_user",
+    #     "first_name": "Рома",
+    #     "coins": 1500,
+    #     "bank": 300,
+    #     "last_daily": "2024-01-15",
+    #     "last_work": "2024-01-15 14:30:00"
+    # }
+}
 
-def load_users_data():
-    """Загрузить данные пользователей из файла"""
+def save_database_to_file():
+    """Сохранить базу данных в отдельный файл (для резервной копии)"""
     try:
-        if os.path.exists(DATA_FILE):
-            with open(DATA_FILE, 'r', encoding='utf-8') as f:
-                return json.load(f)
+        with open('database_backup.py', 'w', encoding='utf-8') as f:
+            f.write('# АВТОСОХРАНЕННАЯ БАЗА ДАННЫХ БОТА\n')
+            f.write('# НЕ РЕДАКТИРУЙТЕ ВРУЧНУЮ!\n\n')
+            f.write('USERS_DATABASE = ')
+            f.write(json.dumps(USERS_DATABASE, ensure_ascii=False, indent=2))
+            f.write('\n\n# Конец базы данных')
+        logger.info(f"💾 База сохранена в файл: {len(USERS_DATABASE)} пользователей")
     except Exception as e:
-        logger.error(f"Ошибка загрузки данных: {e}")
-    return {}
+        logger.error(f"❌ Ошибка сохранения базы: {e}")
 
-def save_users_data(data):
-    """Сохранить данные пользователей в файл"""
+def load_database_from_file():
+    """Загрузить базу данных из файла при запуске"""
+    global USERS_DATABASE
     try:
-        with open(DATA_FILE, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        return True
+        if os.path.exists('database_backup.py'):
+            with open('database_backup.py', 'r', encoding='utf-8') as f:
+                content = f.read()
+                if 'USERS_DATABASE = ' in content:
+                    # Безопасное извлечение данных
+                    import ast
+                    lines = content.split('\n')
+                    for i, line in enumerate(lines):
+                        if 'USERS_DATABASE = ' in line:
+                            db_str = '\n'.join(lines[i:])
+                            # Находим начало и конец словаря
+                            start = db_str.find('{')
+                            end = db_str.rfind('}') + 1
+                            if start != -1 and end != -1:
+                                db_dict_str = db_str[start:end]
+                                USERS_DATABASE = ast.literal_eval(db_dict_str)
+                                logger.info(f"✅ Загружено {len(USERS_DATABASE)} пользователей из файла")
+                                break
     except Exception as e:
-        logger.error(f"Ошибка сохранения данных: {e}")
-        return False
+        logger.warning(f"Не удалось загрузить базу: {e}")
+        USERS_DATABASE = {}
+
+# Загружаем базу при старте
+load_database_from_file()
 
 def get_user(user_id):
     """Получить данные пользователя"""
-    data = load_users_data()
-    return data.get(str(user_id))
+    return USERS_DATABASE.get(str(user_id))
 
 def save_user(user_data):
     """Сохранить/обновить данные пользователя"""
-    data = load_users_data()
     user_id = str(user_data['user_id'])
     
-    # Если пользователь уже есть, обновляем только отсутствующие поля
-    if user_id in data:
-        data[user_id].update({
-            'username': user_data.get('username', data[user_id].get('username')),
-            'first_name': user_data.get('first_name', data[user_id].get('first_name')),
-            'last_name': user_data.get('last_name', data[user_id].get('last_name'))
-        })
-    else:
-        # Создаем нового пользователя с начальным балансом
-        data[user_id] = {
+    if user_id not in USERS_DATABASE:
+        # Новый пользователь
+        USERS_DATABASE[user_id] = {
             'user_id': user_data['user_id'],
             'username': user_data.get('username'),
             'first_name': user_data.get('first_name'),
             'last_name': user_data.get('last_name'),
-            'coins': 1000,  # Начальный баланс
-            'bank': 0,      # Деньги в банке
+            'coins': 1000,  # Стартовый баланс
+            'bank': 0,
+            'last_daily': None,
+            'last_work': None,
             'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'last_active': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
+        # Сохраняем при добавлении нового пользователя
+        save_database_to_file()
+    else:
+        # Обновляем существующего
+USERS_DATABASE[user_id].update({
+            'username': user_data.get('username') or USERS_DATABASE[user_id].get('username'),
+            'first_name': user_data.get('first_name') or USERS_DATABASE[user_id].get('first_name'),
+            'last_name': user_data.get('last_name') or USERS_DATABASE[user_id].get('last_name'),
+            'last_active': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        })
     
-    return save_users_data(data)
+    return True
 
 def add_coins(user_id, amount):
     """Добавить монеты пользователю"""
-    data = load_users_data()
     user_id_str = str(user_id)
     
-    if user_id_str in data:
-        data[user_id_str]['coins'] = data[user_id_str].get('coins', 0) + amount
-        data[user_id_str]['last_active'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        save_users_data(data)
-        return data[user_id_str]['coins']
+    if user_id_str in USERS_DATABASE:
+        USERS_DATABASE[user_id_str]['coins'] = USERS_DATABASE[user_id_str].get('coins', 0) + amount
+        USERS_DATABASE[user_id_str]['last_active'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # Сохраняем при изменении баланса
+        save_database_to_file()
+        return USERS_DATABASE[user_id_str]['coins']
     return None
 
 def get_balance(user_id):
@@ -92,6 +129,25 @@ def get_balance(user_id):
         return user.get('coins', 0), user.get('bank', 0)
     return 0, 0
 
+def get_top_users(limit=10):
+    """Получить топ пользователей по монетам"""
+    sorted_users = sorted(
+        USERS_DATABASE.items(),
+        key=lambda x: x[1].get('coins', 0),
+        reverse=True
+    )[:limit]
+    
+    return [
+        {
+            'user_id': user_id,
+            'username': data.get('username'),
+            'first_name': data.get('first_name'),
+            'coins': data.get('coins', 0)
+        }
+        for user_id, data in sorted_users
+    ]
+
+# ===================== КОМАНДЫ БОТА =====================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     
@@ -108,7 +164,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         welcome_bonus = True
     else:
         welcome_bonus = False
-        # Обновляем последнюю активность
         save_user(user_data)
 
     # Создаем ссылку на профиль пользователя
@@ -118,7 +173,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Получаем баланс
     coins, bank = get_balance(user.id)
     
-    welcome_text =  f"{user_mention}, приветствую 🤚🏻\n\n"
+    welcome_text = f"{user_mention}, приветствую 🤚🏻\n\n"
     welcome_text += f"🎗 Меня зовут PGB, я многофункциональный игровой развлекательный бот 🎗\n\n"
     welcome_text += f"🎮 В боте вы сможете поиграть во множество игр, зарабатывать валюты, копать руды, завести питомца, открывать кейсы и многое другое! 🎮\n\n"
     welcome_text += f"💥 Имеются различные имущества, статусы, работы, которые вы сможете купить и улучшать 💥\n\n"
@@ -126,10 +181,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if welcome_bonus:
         welcome_text += f"🎁 Вам начислен стартовый бонус: 1000 монет!\n\n"
     
+   
     welcome_text += f"❇️ Добро пожаловать! ❇️"
 
     await update.message.reply_text(welcome_text, parse_mode="HTML")
-
 
 async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /balance - показать баланс"""
@@ -140,7 +195,7 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         save_user({
             'user_id': user.id,
             'username': user.username,
-            'first_name': user.first_name,
+'first_name': user.first_name,
             'last_name': user.last_name
         })
     
@@ -149,8 +204,13 @@ async def balance_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     balance_text = f"💰 {user.first_name}, <b>ваш баланс:</b>\n\n"
     balance_text += f"💵 <b>Монеты:</b> {coins}\n"
+    balance_text += f"🏦 <b>В банке:</b> {bank}\n"
+    balance_text += f"📊 <b>Всего:</b> {total} монет\n\n"
     
-    
+    if coins < 100:
+        balance_text += f"💡 Используйте /work чтобы заработать!"
+    elif coins > 5000:
+        balance_text += f"🎉 Отличный результат!"
 
     await update.message.reply_text(balance_text, parse_mode="HTML")
 
@@ -180,7 +240,7 @@ async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     
-    # Начисляем бонус (случайный от 50 до 500 монет)
+    # Начисляем бонус
     import random
     bonus_amount = random.randint(100, 1000)
     
@@ -188,9 +248,7 @@ async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_balance = add_coins(user.id, bonus_amount)
     
     # Обновляем дату получения бонуса
-    data = load_users_data()
-    data[str(user.id)]['last_daily'] = today
-    save_users_data(data)
+    USERS_DATABASE[str(user.id)]['last_daily'] = today
     
     await update.message.reply_text(
         f"🎉 <b>ЕЖЕДНЕВНЫЙ БОНУС!</b>\n\n"
@@ -203,7 +261,8 @@ async def daily_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def work_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /work - заработать монеты"""
     user = update.effective_user
-# Проверяем, не работал ли слишком часто (раз в 5 минут)
+    
+    # Проверяем, не работал ли слишком часто (раз в 5 минут)
     user_data = get_user(user.id)
     if not user_data:
         save_user({
@@ -230,7 +289,7 @@ async def work_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
     
-    # Начисляем заработок (случайный от 10 до 100 монет)
+    # Начисляем заработок
     import random
     work_amount = random.randint(50, 250)
     
@@ -238,9 +297,7 @@ async def work_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     new_balance = add_coins(user.id, work_amount)
     
     # Обновляем время последней работы
-    data = load_users_data()
-    data[str(user.id)]['last_work'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    save_users_data(data)
+    USERS_DATABASE[str(user.id)]['last_work'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
     # Случайные сообщения о работе
     jobs = [
@@ -262,6 +319,59 @@ async def work_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🔄 Следующая работа через 5 минут",
         parse_mode="HTML"
     )
+async def top_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /top - топ игроков"""
+    top_users = get_top_users(10)
+    
+    if not top_users:
+        await update.message.reply_text("📊 Топ игроков пуст!")
+        return
+    
+    top_text = "🏆 <b>ТОП-10 ИГРОКОВ ПО МОНЕТАМ</b>\n\n"
+    for i, user in enumerate(top_users, 1):
+        name = user.get('first_name') or user.get('username') or f"Игрок {user['user_id']}"
+        coins = user.get('coins', 0)
+        medal = "🥇" if i == 1 else ("🥈" if i == 2 else ("🥉" if i == 3 else f"{i}."))
+        top_text += f"{medal} {name}: <b>{coins}</b> монет\n"
+    
+    total_users = len(USERS_DATABASE)
+    total_coins = sum(user.get('coins', 0) for user in USERS_DATABASE.values())
+    
+    top_text += f"\n📊 <b>Статистика:</b>\n"
+    top_text += f"👥 Всего игроков: {total_users}\n"
+    top_text += f"💰 Всего монет в игре: {total_coins}"
+
+    await update.message.reply_text(top_text, parse_mode="HTML")
+
+async def save_db_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /save_db - сохранить базу данных"""
+    save_database_to_file()
+    await update.message.reply_text(
+        f"💾 <b>База данных сохранена!</b>\n\n"
+        f"📁 Файл: database_backup.py\n"
+        f"👥 Пользователей: {len(USERS_DATABASE)}\n"
+        f"💰 Всего монет: {sum(user.get('coins', 0) for user in USERS_DATABASE.values())}",
+        parse_mode="HTML"
+    )
+
+async def stats_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Команда /stats - статистика бота"""
+    total_users = len(USERS_DATABASE)
+    total_coins = sum(user.get('coins', 0) for user in USERS_DATABASE.values())
+    active_today = sum(
+        1 for user in USERS_DATABASE.values()
+        if user.get('last_active', '').startswith(datetime.now().strftime('%Y-%m-%d'))
+    )
+    
+    stats_text = "📊 <b>СТАТИСТИКА БОТА</b>\n\n"
+    stats_text += f"👥 <b>Всего пользователей:</b> {total_users}\n"
+    stats_text += f"💰 <b>Всего монет в игре:</b> {total_coins}\n"
+    stats_text += f"📈 <b>Активных сегодня:</b> {active_today}\n\n"
+    stats_text += f"💾 <b>База данных:</b> В памяти\n"
+    stats_text += f"🔄 <b>Автосохранение:</b> При изменениях\n\n"
+    stats_text += f"⚡ Данные сохраняются при обновлении кода!"
+
+    await update.message.reply_text(stats_text, parse_mode="HTML")
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Команда /help"""
@@ -273,21 +383,16 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     help_text += "• /daily - Ежедневный бонус (100-1000 монет)\n"
     help_text += "• /work - Заработать монеты (50-250 монет)\n\n"
     
-    help_text += "🎮 <b>РАЗВЛЕЧЕНИЯ:</b>\n"
-    help_text += "• /casino [ставка] - Играть в казино\n"
-    help_text += "• /roll [число] - Угадать число\n"
-    help_text += "• /coin - Орел или решка\n\n"
-    
     help_text += "📊 <b>ИНФОРМАЦИЯ:</b>\n"
-    help_text += "• /top - Топ игроков по монетам\n"
-    help_text += "• /profile - Ваш профиль\n"
-    help_text += "• /ping - Проверка работы бота\n\n"
+    help_text += "• /top - Топ игроков\n"
+    help_text += "• /stats - Статистика бота\n"
+    help_text += "• /save_db - Сохранить базу\n"
+    help_text += "• /ping - Проверка работы\n\n"
     
-    help_text += "⚡ <b>В РАЗРАБОТКЕ:</b>\n"
+    help_text += "🎮 <b>В РАЗРАБОТКЕ:</b>\n"
+    help_text += "• /casino - Казино\n"
     help_text += "• Магазин предметов\n"
-    help_text += "• Система бизнесов\n"
-    help_text += "• Кейсы и инвентарь\n"
-    help_text += "• Питомцы и дома"
+    help_text += "• Кейсы и инвентарь"
 
     await update.message.reply_text(help_text, parse_mode="HTML")
 
@@ -305,11 +410,14 @@ def main():
         application.add_handler(CommandHandler("start", start))
         application.add_handler(CommandHandler("balance", balance_command))
         application.add_handler(CommandHandler("daily", daily_command))
-        application.add_handler(CommandHandler("work", work_command))
+application.add_handler(CommandHandler("work", work_command))
+        application.add_handler(CommandHandler("top", top_command))
+        application.add_handler(CommandHandler("save_db", save_db_command))
+        application.add_handler(CommandHandler("stats", stats_command))
         application.add_handler(CommandHandler("help", help_command))
         application.add_handler(CommandHandler("ping", ping_command))
         
-        logger.info(f"🤖 Бот запускается с токеном: {TOKEN[:10]}...")
+        logger.info(f"🤖 Бот запускается. Пользователей в БД: {len(USERS_DATABASE)}")
         
         # Запускаем бота
         application.run_polling(allowed_updates=Update.ALL_TYPES)
@@ -317,9 +425,6 @@ def main():
     except Exception as e:
         logger.error(f"❌ Критическая ошибка: {e}")
         raise
-if __name__ == '__main__':  # ← ИСПРАВЛЕНО: ДВОЙНЫЕ ПОДЧЕРКИВАНИЯ!
+
+if __name__ == '__main__':
     main()
-
-
-
-
